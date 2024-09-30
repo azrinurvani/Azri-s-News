@@ -34,6 +34,9 @@ fun NewsArticleCard(
         Column(
             modifier = Modifier.padding(12.dp)
         ) {
+            ImageHolder(
+                imageUrl = article.urlToImage
+            )
             Text(
                 text = article.title,
                 style = MaterialTheme.typography.titleMedium,
