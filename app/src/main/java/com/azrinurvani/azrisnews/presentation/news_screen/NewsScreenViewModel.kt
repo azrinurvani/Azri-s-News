@@ -39,16 +39,23 @@ class NewsScreenViewModel @Inject constructor(
     }
 
     private fun getNewsArticles(category:String){
+        state = state.copy(isLoading = true)
         viewModelScope.launch {
             val result = newsRepository.getTopHeadlines(category = category)
             when(result){
                 is Resource.Success ->{
                     state = state.copy( //copy result data to state of category
-                        articles = result.data ?: emptyList()
+                        articles = result.data ?: emptyList(),
+                        isLoading = false,
+                        error = null
                     )
                 }
                 is Resource.Error ->{
-
+                    state = state.copy(
+                        error = result.message,
+                        isLoading = false,
+                        articles = emptyList()
+                    )
                 }
             }
         }
