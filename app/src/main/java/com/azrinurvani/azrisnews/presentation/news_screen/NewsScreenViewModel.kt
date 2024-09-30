@@ -19,8 +19,23 @@ class NewsScreenViewModel @Inject constructor(
 
     var articles by mutableStateOf<List<Article>>(emptyList())
 
+    var state by mutableStateOf(NewsScreenState())
+
     init {
         getNewsArticles(category = "general")
+    }
+
+    fun onEvent(event : NewsScreenEvent){
+        when(event){
+            is NewsScreenEvent.OnCategoryChange -> {
+                state = state.copy(category = event.category)
+                getNewsArticles(category = state.category)
+            }
+            NewsScreenEvent.OnCloseIconClicked -> TODO()
+            is NewsScreenEvent.OnNewsCardClicked -> TODO()
+            NewsScreenEvent.OnSearchIconClicked -> TODO()
+            is NewsScreenEvent.OnSearchQueryChange -> TODO()
+        }
     }
 
     private fun getNewsArticles(category:String){
@@ -28,7 +43,9 @@ class NewsScreenViewModel @Inject constructor(
             val result = newsRepository.getTopHeadlines(category = category)
             when(result){
                 is Resource.Success ->{
-                    articles = result.data ?: emptyList()
+                    state = state.copy( //copy result data to state of category
+                        articles = result.data ?: emptyList()
+                    )
                 }
                 is Resource.Error ->{
 
