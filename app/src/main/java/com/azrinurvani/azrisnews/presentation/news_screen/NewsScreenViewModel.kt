@@ -32,7 +32,9 @@ class NewsScreenViewModel @Inject constructor(
                 getNewsArticles(category = state.category)
             }
             NewsScreenEvent.OnCloseIconClicked -> TODO()
-            is NewsScreenEvent.OnNewsCardClicked -> TODO()
+            is NewsScreenEvent.OnNewsCardClicked -> {
+                state = state.copy(selectedArticle = event.article)
+            }
             NewsScreenEvent.OnSearchIconClicked -> TODO()
             is NewsScreenEvent.OnSearchQueryChange -> TODO()
         }
