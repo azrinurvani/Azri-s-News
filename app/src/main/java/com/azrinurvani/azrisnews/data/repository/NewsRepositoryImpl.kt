@@ -17,4 +17,13 @@ class NewsRepositoryImpl ( //no need @Inject NewsApi class
             Resource.Error(message = "Failed to fetch news ${e.message}")
         }
     }
+
+    override suspend fun searchForNews(query: String): Resource<List<Article>> {
+        return try{
+            val response = newsApi.searchForNews(query = query)
+            Resource.Success(response.articles)
+        }catch (e: Exception){
+            Resource.Error(message = "Failed to fetch news ${e.message}")
+        }
+    }
 }

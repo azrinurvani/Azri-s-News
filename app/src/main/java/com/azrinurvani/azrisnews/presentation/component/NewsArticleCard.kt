@@ -18,6 +18,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.azrinurvani.azrisnews.domain.model.Article
 import com.azrinurvani.azrisnews.domain.model.Source
+import com.azrinurvani.azrisnews.util.dateFormatted
 
 @Composable
 fun NewsArticleCard(
@@ -25,6 +26,7 @@ fun NewsArticleCard(
     article : Article,
     onCardClick : (Article) -> Unit
 ){
+    val date = dateFormatted(article.publishedAt)
     Card(
         modifier = modifier
             .clickable {
@@ -53,7 +55,7 @@ fun NewsArticleCard(
                     style = MaterialTheme.typography.bodySmall
                 )
                 Text(
-                    text = article.publishedAt ?: "",
+                    text = date,
                     style = MaterialTheme.typography.bodySmall
                 )
             }

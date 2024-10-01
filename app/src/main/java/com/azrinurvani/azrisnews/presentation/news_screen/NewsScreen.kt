@@ -1,5 +1,6 @@
 package com.azrinurvani.azrisnews.presentation.news_screen
 
+import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -26,7 +27,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.unit.dp
 import com.azrinurvani.azrisnews.domain.model.Article
 import com.azrinurvani.azrisnews.presentation.component.BottomSheetContent
@@ -34,6 +39,8 @@ import com.azrinurvani.azrisnews.presentation.component.CategoryTabRow
 import com.azrinurvani.azrisnews.presentation.component.NewsArticleCard
 import com.azrinurvani.azrisnews.presentation.component.NewsScreenTopBar
 import com.azrinurvani.azrisnews.presentation.component.RetryContent
+import com.azrinurvani.azrisnews.presentation.component.SearchAppBar
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -63,6 +70,10 @@ fun NewsScreen(
 
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true) //skipPartiallyExpanded its mean for full and half page to show
     var shouldBottomSheetShow by remember { mutableStateOf(false) }
+
+    val focusRequester = remember{ FocusRequester() }
+    val focusManager = LocalFocusManager.current
+    val keyboardController = LocalSoftwareKeyboardController.current
 
     if (shouldBottomSheetShow){
         ModalBottomSheet(
@@ -96,49 +107,92 @@ fun NewsScreen(
         }
     }
 
-    Scaffold(
-        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
-        topBar = {
-            NewsScreenTopBar(
-                scrollBehavior = scrollBehavior,
-                onSearchIconClicked = {
+    Column(
+        modifier = Modifier.fillMaxSize()
+    ) {
+        Crossfade(
+            targetState = state.isSearchBarVisible
+        ) { isVisible ->
+            if (isVisible) {
+                Column {
+                    SearchAppBar(
+                        modifier = Modifier.focusRequester(focusRequester),
+                        value = state.searchQuery,
+                        onInputValueChange = { newValue ->
+                            onEvent(NewsScreenEvent.OnSearchQueryChange(newValue))
+                        },
+                        onCloseIconClicked = {
+                            onEvent(NewsScreenEvent.OnCloseIconClicked)
+                        },
+                        onSearchIconClicked = {
+                            keyboardController?.hide()
+                            focusManager.clearFocus()
+                        }
+                    )
+                    NewsArticleList(
+                        state = state,
+                        onCardClicked = { article ->
+                            shouldBottomSheetShow = true
+                            onEvent(NewsScreenEvent.OnNewsCardClicked(article = article))
+                        },
+                        onRetry = {
+                            onEvent(NewsScreenEvent.OnCategoryChange(state.category))
+                        }
+                    )
+                }
+            }else{
+                Scaffold(
+                    modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+                    topBar = {
+                        NewsScreenTopBar(
+                            scrollBehavior = scrollBehavior,
+                            onSearchIconClicked = {
+                                coroutineScope.launch {
+                                    delay(500)
+                                    focusRequester.requestFocus()
+                                }
+                                onEvent(NewsScreenEvent.OnSearchIconClicked)
+                            }
+                        )
+                    }
+                ) { innerPadding ->
+
+                    Column (
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(innerPadding)
+                    ){
+                        CategoryTabRow(
+                            pagerState = pagerState,
+                            categories = categories,
+                            onTabSelected = { index ->
+                                coroutineScope.launch {
+                                    pagerState.animateScrollToPage(index)
+                                }
+                            }
+                        )
+                        HorizontalPager(
+                            state = pagerState
+                        ) {
+                            NewsArticleList(
+                                state = state,
+                                onCardClicked = { article ->
+                                    shouldBottomSheetShow = true
+                                    onEvent(NewsScreenEvent.OnNewsCardClicked(article = article))
+                                },
+                                onRetry = {
+                                    onEvent(NewsScreenEvent.OnCategoryChange(state.category))
+                                }
+                            )
+                        }
+                    }
 
                 }
-            )
-        }
-    ) { innerPadding ->
-
-        Column (
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-        ){
-            CategoryTabRow(
-                pagerState = pagerState,
-                categories = categories,
-                onTabSelected = { index ->
-                    coroutineScope.launch {
-                        pagerState.animateScrollToPage(index)
-                    }
-                }
-            )
-            HorizontalPager(
-                state = pagerState
-            ) {
-                NewsArticleList(
-                    state = state,
-                    onCardClicked = { article ->
-                        shouldBottomSheetShow = true
-                        onEvent(NewsScreenEvent.OnNewsCardClicked(article = article))
-                    },
-                    onRetry = {
-                        onEvent(NewsScreenEvent.OnCategoryChange(state.category))
-                    }
-                )
             }
         }
-
     }
+
+
 }
 
 @Composable

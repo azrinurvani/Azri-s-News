@@ -9,6 +9,8 @@ import com.azrinurvani.azrisnews.domain.model.Article
 import com.azrinurvani.azrisnews.domain.repository.NewsRepository
 import com.azrinurvani.azrisnews.util.Resource
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -17,9 +19,11 @@ class NewsScreenViewModel @Inject constructor(
     private val newsRepository: NewsRepository
 ) : ViewModel() {
 
-    var articles by mutableStateOf<List<Article>>(emptyList())
+//    var articles by mutableStateOf<List<Article>>(emptyList())
 
     var state by mutableStateOf(NewsScreenState())
+
+    private var searchJob : Job? = null
 
     init {
         getNewsArticles(category = "general")
@@ -31,12 +35,28 @@ class NewsScreenViewModel @Inject constructor(
                 state = state.copy(category = event.category)
                 getNewsArticles(category = state.category)
             }
-            NewsScreenEvent.OnCloseIconClicked -> TODO()
             is NewsScreenEvent.OnNewsCardClicked -> {
                 state = state.copy(selectedArticle = event.article)
             }
-            NewsScreenEvent.OnSearchIconClicked -> TODO()
-            is NewsScreenEvent.OnSearchQueryChange -> TODO()
+            NewsScreenEvent.OnSearchIconClicked -> {
+                state = state.copy(
+                    isSearchBarVisible = true,
+                    articles = emptyList()
+                )
+            }
+            NewsScreenEvent.OnCloseIconClicked -> {
+                state = state.copy(isSearchBarVisible = false)
+                getNewsArticles(category = state.category)
+            }
+            is NewsScreenEvent.OnSearchQueryChange -> {
+                state = state.copy(searchQuery = event.searchQuery)
+                searchJob?.cancel() //search job handle state UI and no execute directly after query changes
+                searchJob = viewModelScope.launch { //need launch scope for process query before call search api with delay 1000 ms
+                    delay(1000)
+                    searchForNews(query = state.searchQuery)
+                }
+
+            }
         }
     }
 
@@ -44,6 +64,32 @@ class NewsScreenViewModel @Inject constructor(
         state = state.copy(isLoading = true)
         viewModelScope.launch {
             val result = newsRepository.getTopHeadlines(category = category)
+            when(result){
+                is Resource.Success ->{
+                    state = state.copy( //copy result data to state of category
+                        articles = result.data ?: emptyList(),
+                        isLoading = false,
+                        error = null
+                    )
+                }
+                is Resource.Error ->{
+                    state = state.copy(
+                        error = result.message,
+                        isLoading = false,
+                        articles = emptyList()
+                    )
+                }
+            }
+        }
+    }
+
+    private fun searchForNews(query:String){
+        if (query.isEmpty()){
+            return
+        }
+        state = state.copy(isLoading = true)
+        viewModelScope.launch {
+            val result = newsRepository.searchForNews(query = query)
             when(result){
                 is Resource.Success ->{
                     state = state.copy( //copy result data to state of category

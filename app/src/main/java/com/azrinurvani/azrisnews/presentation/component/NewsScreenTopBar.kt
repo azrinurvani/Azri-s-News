@@ -30,7 +30,7 @@ fun NewsScreenTopBar(
         },
         actions = {
             IconButton(
-                onClick = { onSearchIconClicked }
+                onClick = { onSearchIconClicked() }
             ) {
                 Icon(
                     imageVector = Icons.Filled.Search,
